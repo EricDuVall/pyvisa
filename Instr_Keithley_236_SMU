@@ -1,1 +1,10 @@
-Instrument_Generic
+# ***************************************************************
+#   Eric DuVall
+#   10/31/2024
+#
+#   Keithley 236 SMU GPIB HP-IB software demonstration using pyvisa
+#   
+#   *IDN? command
+# ****************************************************************
+
+
