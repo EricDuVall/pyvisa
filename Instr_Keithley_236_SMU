@@ -1,10 +1,159 @@
-# ***************************************************************
 #   Eric DuVall
-#   10/31/2024
+#   6/10/2024
 #
-#   Keithley 236 SMU GPIB HP-IB software demonstration using pyvisa
+#
+#   Keithley 236 pYVISA
 #   
-#   *IDN? command
-# ****************************************************************
+###################################
+
+###########################
+#   resources 
+#   https://github.com/SweepMe/instrument-drivers/blob/main/src/SMU-Keithley_236/main.py
+#   https://pyvisa.readthedocs.io/en/latest/introduction/resources.html
+##########################
+
+import time
+import pyvisa
+
+def check_resource():
+    #  Checks for devices available as USB, Ethernet, or GPIB
+    RM = pyvisa.ResourceManager()
+    RM.list_resources()
+    print(RM.list_resources())
+    RM.close()
+
+class Instrument_Keithley_236:
+    def __init__(self):
+        self.TC = 1.0  
+        self.voltage = 1.0
+
+    def connect(self, Address):
+        RM = pyvisa.ResourceManager()
+    
+        try:
+            Address = 17
+            try:
+                self.my_instrument = RM.open_resource('GPIB0::' + str(Address) + '::INSTR')
+            except:
+                print("GPIB did not connect)")
+            print(self.my_instrument.read())
+            print(self.my_instrument.read())
+            print('Connect')
+            #print(self.my_instrument.query('*IDN?'))
+        except:
+            print('Not able to connect to USB')
+    
+    def  close(self):
+        self.my_instrument.close()
+
+    def pyvisa_cmd(self):
+        self.my_instrument.write('J0X') 
+        print("session->",self.my_instrument.session)
+        print("timeout->",self.my_instrument.timeout)
+    
+    def default_setup(self):
+        self.my_instrument.write('O0X')  
+        self.my_instrument.write('Y4X')       
+
+    def setup_fast_read(self):
+        pass
+
+    def simple_measurement(self):          
+        self.my_instrument.write('F0,1X') 
+        self.my_instrument.write('N1X') 
+        self.my_instrument.write('Q1,0,.7,.01,2,1000X') 
+        V_set = (self.my_instrument.query('G1,2,2X'))
+        V = V_set.split(',')
+        self.my_instrument.write('H0X')
+        I_set = (self.my_instrument.query('G4,2,2X'))
+        I = I_set.split(',')
+        for j in range(len(V)):
+            print(V[j],"\t",I[j],"\t", float(V[j])/float(I[j]))
 
 
+    def diode_measurement(self):          
+        self.my_instrument.write('F0,1X') 
+        self.my_instrument.write('N1X')  
+        self.my_instrument.write('Q1,0,.7,.01,1,1000X') 
+        V_set = (self.my_instrument.query('G1,2,2X'))
+        V = V_set.split(',')
+        self.my_instrument.write('H0X')
+        I_set = (self.my_instrument.query('G4,2,2X'))
+        I = I_set.split(',')
+        for j in range(len(V)):
+            print(V[j],"\t",I[j],"\t", float(V[j])/float(I[j]))      
+
+    def diode_current(self):          
+        self.my_instrument.write('F1,1X') 
+        self.my_instrument.write('N1X') 
+        self.my_instrument.write('Q2,.000001,.1,2,9,1000X') 
+        V_set = (self.my_instrument.query('G1,2,2X'))
+        V = V_set.split(',')
+        self.my_instrument.write('H0X')
+        I_set = (self.my_instrument.query('G4,2,2X'))
+        I = I_set.split(',')
+        for j in range(len(V)):
+            print(V[j],"\t",I[j],"\t")    
+
+    def diode_current_small(self):          
+        self.my_instrument.write('F1,1X') 
+        self.my_instrument.write('N1X') 
+        self.my_instrument.write('Q5,1E-14,.1,1,0,200,100X') 
+        V_set = (self.my_instrument.query('G1,2,2X'))
+        V = V_set.split(',')
+        self.my_instrument.write('H0X')
+        I_set = (self.my_instrument.query('G4,2,2X'))
+        I = I_set.split(',')
+        for j in range(len(V)):
+            print(V[j],"\t",I[j],"\t")          
+          
+
+    def simple_step(self):          
+        self.my_instrument.write('F0,1X') 
+        self.my_instrument.write('N1X') 
+        self.my_instrument.write('Q1,0,1,.1,2,100X') 
+        data_size = (self.my_instrument.query('G4,0,2X'))
+        data_series = data_size.split(',')
+        for i in range(len(data_series)//2):
+            y = data_series[2*i]
+            print(y[5:])
+            z = float(y[5:])
+            print(data_series[2*i])
+            print(z)
+
+    def write_front_panel(self, text):
+        self.my_instrument.write('D1,' + str(text) + 'X')
+        time.sleep(10)
+        self.my_instrument.write('D0')
+
+    def read_status(self):
+        print("U0X-->",self.my_instrument.query('U0X'))              #Send model number and firmware revision
+        print("U1X-->",self.my_instrument.query('U1X'))              #Send error status word                                                     
+        print("U2X-->",self.my_instrument.query('U2X'))              #Send stored ASCll string ( "02" command string)
+        print("U3X-->",self.my_instrument.query('U3X'))
+        print("U4X-->",self.my_instrument.query('U4X'))
+        print("U5X-->",self.my_instrument.query('U5X')) 
+        print("U6X-->",self.my_instrument.query('U6X')) 
+        print("U7X-->",self.my_instrument.query('U7X')) 
+        print("U8X-->",self.my_instrument.query('U8X'))
+        print("U9X-->",self.my_instrument.query('U9X')) 
+        print("U10X-->",self.my_instrument.query('U10X')) 
+        print("U11X-->",self.my_instrument.query('U11X')) 
+
+def main():
+    check_resource()
+    instr_236 = Instrument_Keithley_236()
+    instr_236.connect(17)
+    #instr_236.default_setup()
+    instr_236.read_status()
+    #instr_236.simple_measurement()
+    #instr_236.diode_measurement()
+    #instr_236.diode_current()
+    #instr_236.diode_current_small()
+    #instr_236.simple_step()
+    #instr_236.pyvisa_cmd()
+    instr_236.write_front_panel('PINKYPERKY')
+    #instr_236.close()
+
+if __name__=="__main__": 
+    main()
